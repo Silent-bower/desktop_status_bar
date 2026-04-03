@@ -2,42 +2,74 @@
   "opacity": 0.65,
   "width": 186,
   "update_interval_ms": 1500,
-  "apps": [
+  "shortcuts": [
     {
+      "id": "opencode",
       "name": "OpenCode",
       "icon": "⌨️",
-      "type": "cli",
-      "command": "opencode"
+      "kind": "command",
+      "target": "opencode",
+      "group": "开发",
+      "enabled": true
     },
     {
+      "id": "sketchup",
       "name": "SketchUp",
       "icon": "📐",
-      "type": "exe",
-      "path": "auto"
+      "kind": "executable",
+      "target": "auto",
+      "detect": "SketchUp",
+      "group": "设计",
+      "enabled": true
     },
     {
+      "id": "autocad",
+      "name": "AutoCAD",
+      "icon": "📏",
+      "kind": "executable",
+      "target": "auto",
+      "detect": "AutoCAD",
+      "group": "设计",
+      "enabled": true
+    },
+    {
+      "id": "photoshop",
       "name": "Photoshop",
       "icon": "🎨",
-      "type": "exe",
-      "path": "auto"
+      "kind": "executable",
+      "target": "auto",
+      "detect": "Photoshop",
+      "group": "设计",
+      "enabled": true
     },
     {
+      "id": "gemini",
       "name": "Gemini",
       "icon": "✦",
-      "type": "url",
-      "url": "https://gemini.google.com"
+      "kind": "url",
+      "target": "https://gemini.google.com",
+      "browser": "chrome",
+      "group": "AI",
+      "enabled": true
     },
     {
+      "id": "chatgpt",
       "name": "ChatGPT",
       "icon": "💬",
-      "type": "url",
-      "url": "https://chatgpt.com"
+      "kind": "url",
+      "target": "https://chatgpt.com",
+      "browser": "chrome",
+      "group": "AI",
+      "enabled": true
     },
     {
+      "id": "godot",
       "name": "Godot",
       "icon": "🎮",
-      "type": "exe",
-      "path": "D:\\下载\\Godot_v4.6.1-stable_win64.exe\\Godot_v4.6.1-stable_win64.exe"
+      "kind": "executable",
+      "target": "D:\\下载\\Godot_v4.6.1-stable_win64.exe\\Godot_v4.6.1-stable_win64.exe",
+      "group": "开发",
+      "enabled": true
     }
   ]
 }
