@@ -11,14 +11,49 @@ import json
 import shutil
 import time
 import threading
+import locale
+
+def detect_language():
+    try:
+        candidates = []
+        try:
+            candidates.append(locale.getlocale()[0] or '')
+        except Exception:
+            pass
+        try:
+            candidates.append(locale.getdefaultlocale()[0] or '')
+        except Exception:
+            pass
+        try:
+            from ctypes import windll
+            ui_lang = locale.windows_locale.get(windll.kernel32.GetUserDefaultUILanguage(), '')
+            candidates.append(ui_lang)
+        except Exception:
+            pass
+    except Exception:
+        candidates = []
+
+    for lang in candidates:
+        text = str(lang).lower()
+        if text.startswith('zh') or 'chinese' in text:
+            return 'zh'
+    return 'en'
+
+APP_LANG = detect_language()
+
+def pick_lang(zh_text, en_text):
+    return zh_text if APP_LANG == 'zh' else en_text
 
 try:
     import psutil
 except ImportError:
     root = tk.Tk()
     root.withdraw()
-    from tkinter import messagebox
-    messagebox.showerror('缺少依赖', '请先运行 setup.bat 安装依赖，或手动执行：\npip install psutil')
+    messagebox.showerror(
+        pick_lang('缺少依赖', 'Missing dependency'),
+        pick_lang('请先运行 setup.bat 安装依赖，或手动执行：\npip install psutil',
+                  'Run setup.bat first, or install manually:\npip install psutil'),
+    )
     sys.exit(1)
 
 try:
@@ -53,6 +88,8 @@ THEME = {
     "disk_color": "#f9e2af",
     "net_up":     "#a6e3a1",
     "net_down":   "#89b4fa",
+    "scroll_bg":  "#181825",
+    "scroll_trough": "#1e1e2e",
 }
 
 PEEK         = 4
@@ -64,23 +101,135 @@ EDGE_MARGIN_Y = 30
 MAX_HEIGHT_RATIO = 0.84
 LAUNCH_PANEL_HEIGHT = 210
 
+I18N = {
+    'zh': {
+        'group_development': '开发',
+        'group_design': '设计',
+        'group_ai': 'AI',
+        'group_shortcuts': '快捷启动',
+        'status_bar_title': '状态栏',
+        'system_monitor': '系统监控',
+        'memory': '内存',
+        'disk': '磁盘',
+        'quick_launch': '快捷启动',
+        'no_shortcuts': '暂无快捷启动项，点击右上角设置添加',
+        'settings_title': '快捷启动设置',
+        'settings_items': '快捷启动项',
+        'edit_shortcuts': '编辑快捷启动',
+        'settings_button': '设置',
+        'add': '新增',
+        'delete': '删除',
+        'name': '名称',
+        'icon': '图标',
+        'type': '类型',
+        'group': '分组',
+        'target': '目标',
+        'detect_name': '自动识别名',
+        'browser': '浏览器',
+        'browse': '浏览',
+        'enabled_item': '启用此项',
+        'hint': '目标填写示例:\n- executable: 程序 .exe 路径，或写 auto 交给自动识别\n- url: 网站地址，例如 https://chat.openai.com\n- command: 命令行，例如 cursor 或 opencode\n- system: 本地文件夹或文件路径',
+        'save_current': '保存当前项',
+        'save_close': '保存并关闭',
+        'cancel': '取消',
+        'disabled_suffix': ' [停用]',
+        'unnamed': '未命名',
+        'new_item': '新项目',
+        'no_item_selected_title': '未选择项目',
+        'no_item_selected_msg': '请先选择一个快捷启动项。',
+        'name_required_title': '名称不能为空',
+        'name_required_msg': '请填写快捷启动名称。',
+        'target_required_title': '目标不能为空',
+        'target_required_msg': '请填写网址、程序路径或命令。',
+        'saved_title': '已保存',
+        'saved_msg': '快捷启动配置已保存并立即生效。',
+        'exe_files': '可执行文件',
+        'all_files': '所有文件',
+        'cores': '核',
+    },
+    'en': {
+        'group_development': 'Development',
+        'group_design': 'Design',
+        'group_ai': 'AI',
+        'group_shortcuts': 'Shortcuts',
+        'status_bar_title': 'Status Bar',
+        'system_monitor': 'System Monitor',
+        'memory': 'Memory',
+        'disk': 'Disk',
+        'quick_launch': 'Quick Launch',
+        'no_shortcuts': 'No shortcuts yet. Click the settings button to add one.',
+        'settings_title': 'Quick Launch Settings',
+        'settings_items': 'Shortcuts',
+        'edit_shortcuts': 'Edit Shortcut',
+        'settings_button': 'Settings',
+        'add': 'Add',
+        'delete': 'Delete',
+        'name': 'Name',
+        'icon': 'Icon',
+        'type': 'Type',
+        'group': 'Group',
+        'target': 'Target',
+        'detect_name': 'Auto-detect Name',
+        'browser': 'Browser',
+        'browse': 'Browse',
+        'enabled_item': 'Enable this shortcut',
+        'hint': 'Target examples:\n- executable: an .exe path, or use auto for detection\n- url: a website like https://chat.openai.com\n- command: a CLI command like cursor or opencode\n- system: a local file or folder path',
+        'save_current': 'Save Item',
+        'save_close': 'Save and Close',
+        'cancel': 'Cancel',
+        'disabled_suffix': ' [Disabled]',
+        'unnamed': 'Unnamed',
+        'new_item': 'New Item',
+        'no_item_selected_title': 'No item selected',
+        'no_item_selected_msg': 'Please select a shortcut first.',
+        'name_required_title': 'Name is required',
+        'name_required_msg': 'Please enter a shortcut name.',
+        'target_required_title': 'Target is required',
+        'target_required_msg': 'Please enter a URL, path, or command.',
+        'saved_title': 'Saved',
+        'saved_msg': 'Shortcut settings were saved and applied.',
+        'exe_files': 'Executable Files',
+        'all_files': 'All Files',
+        'cores': 'cores',
+    },
+}
+
+GROUP_ALIASES = {
+    '开发': 'group_development',
+    'Development': 'group_development',
+    '设计': 'group_design',
+    'Design': 'group_design',
+    'AI': 'group_ai',
+    '快捷启动': 'group_shortcuts',
+    'Shortcuts': 'group_shortcuts',
+}
+
+def tr(key):
+    return I18N.get(APP_LANG, I18N['en']).get(key, key)
+
+def group_label(key):
+    return tr(f'group_{key}')
+
+def display_group(group):
+    return tr(GROUP_ALIASES.get(group, '')) if group in GROUP_ALIASES else group
+
 def default_shortcuts():
     return [
         {"id": "opencode", "name": "OpenCode", "icon": "⌨️", "kind": "command",
-         "target": "opencode", "group": "开发", "enabled": True},
+         "target": "opencode", "group": group_label('development'), "enabled": True},
         {"id": "sketchup", "name": "SketchUp", "icon": "📐", "kind": "executable",
-         "target": "auto", "detect": "SketchUp", "group": "设计", "enabled": True},
+         "target": "auto", "detect": "SketchUp", "group": group_label('design'), "enabled": True},
         {"id": "autocad", "name": "AutoCAD", "icon": "📏", "kind": "executable",
-         "target": "auto", "detect": "AutoCAD", "group": "设计", "enabled": True},
+         "target": "auto", "detect": "AutoCAD", "group": group_label('design'), "enabled": True},
         {"id": "photoshop", "name": "Photoshop", "icon": "🎨", "kind": "executable",
-         "target": "auto", "detect": "Photoshop", "group": "设计", "enabled": True},
+         "target": "auto", "detect": "Photoshop", "group": group_label('design'), "enabled": True},
         {"id": "gemini", "name": "Gemini", "icon": "✦", "kind": "url",
-         "target": "https://gemini.google.com", "browser": "chrome", "group": "AI", "enabled": True},
+         "target": "https://gemini.google.com", "browser": "chrome", "group": group_label('ai'), "enabled": True},
         {"id": "chatgpt", "name": "ChatGPT", "icon": "💬", "kind": "url",
-         "target": "https://chatgpt.com", "browser": "chrome", "group": "AI", "enabled": True},
+         "target": "https://chatgpt.com", "browser": "chrome", "group": group_label('ai'), "enabled": True},
         {"id": "godot", "name": "Godot", "icon": "🎮", "kind": "executable",
          "target": "D:\\下载\\Godot_v4.6.1-stable_win64.exe\\Godot_v4.6.1-stable_win64.exe",
-         "group": "开发", "enabled": True},
+         "group": group_label('development'), "enabled": True},
     ]
 
 def normalize_shortcut(item):
@@ -95,7 +244,7 @@ def normalize_shortcut(item):
             'id': item.get('id') or item.get('name', '').strip().lower().replace(' ', '_'),
             'name': item.get('name', 'App'),
             'icon': item.get('icon', '▸'),
-            'group': item.get('group', '快捷启动'),
+            'group': item.get('group', group_label('shortcuts')),
             'enabled': item.get('enabled', True),
         }
         if legacy_type == 'cli':
@@ -113,7 +262,7 @@ def normalize_shortcut(item):
     shortcut['id'] = shortcut.get('id') or shortcut.get('name', 'item').strip().lower().replace(' ', '_')
     shortcut['name'] = shortcut.get('name', 'App')
     shortcut['icon'] = shortcut.get('icon', '▸')
-    shortcut['group'] = shortcut.get('group', '快捷启动')
+    shortcut['group'] = shortcut.get('group', group_label('shortcuts'))
     shortcut['enabled'] = bool(shortcut.get('enabled', True))
     shortcut['kind'] = shortcut.get('kind', 'executable')
     shortcut['target'] = shortcut.get('target', '')
@@ -465,7 +614,7 @@ class StatusBar:
 
     def _setup_window(self):
         r = self.root
-        r.title('状态栏')
+        r.title(tr('status_bar_title'))
         r.overrideredirect(True)
         r.attributes('-topmost', True)
         r.attributes('-alpha', self.cfg.get('opacity', 0.65))
@@ -598,7 +747,7 @@ class StatusBar:
         hdr_in = tk.Frame(hdr, bg=t['bg_section'])
         hdr_in.pack(fill='x', padx=10)
 
-        tk.Label(hdr_in, text='⚡ 系统监控', font=('Microsoft YaHei UI', 9, 'bold'),
+        tk.Label(hdr_in, text=f"⚡ {tr('system_monitor')}", font=('Microsoft YaHei UI', 9, 'bold'),
                  fg=t['accent'], bg=t['bg_section']).pack(side='left')
 
         close = tk.Label(hdr_in, text='✕', font=('Consolas', 10),
@@ -616,8 +765,15 @@ class StatusBar:
         self._pin_btn.bind('<Leave>', lambda e: self._pin_btn.config(
             fg=t['accent'] if self._pinned else t['text_dim']))
 
-        settings_btn = tk.Label(hdr_in, text='⚙', font=('Segoe UI Emoji', 9),
-                                fg=t['text_dim'], bg=t['bg_section'], cursor='hand2')
+        settings_btn = tk.Label(
+            hdr_in,
+            text=tr('settings_button'),
+            font=('Microsoft YaHei UI', 8, 'bold'),
+            fg=t['text_dim'],
+            bg=t['bg_section'],
+            cursor='hand2',
+            padx=4,
+        )
         settings_btn.pack(side='right', padx=(0, 6))
         settings_btn.bind('<Button-1>', self._open_settings_panel)
         settings_btn.bind('<Enter>', lambda e: settings_btn.config(fg=t['accent']))
@@ -628,8 +784,8 @@ class StatusBar:
         sf.pack(fill='x', pady=2)
 
         self.cpu_bar = self._stat_row(sf, 'CPU')
-        self.ram_bar = self._stat_row(sf, '内存')
-        self.disk_bar = self._stat_row(sf, '磁盘')
+        self.ram_bar = self._stat_row(sf, tr('memory'))
+        self.disk_bar = self._stat_row(sf, tr('disk'))
 
         self.freq_label = tk.Label(sf, text='', font=('Consolas', 7),
                                    fg=t['text_dim'], bg=t['bg'])
@@ -655,8 +811,26 @@ class StatusBar:
 
         lh = tk.Frame(lf, bg=t['bg_section'], pady=4)
         lh.pack(fill='x')
-        tk.Label(lh, text='🚀 快捷启动', font=('Microsoft YaHei UI', 9, 'bold'),
+        tk.Label(lh, text=f"🚀 {tr('quick_launch')}", font=('Microsoft YaHei UI', 9, 'bold'),
                  fg=t['accent'], bg=t['bg_section']).pack(padx=10, anchor='w')
+
+        settings_row = tk.Frame(lf, bg=t['bg'], pady=2)
+        settings_row.pack(fill='x', padx=2)
+        settings_launch_btn = tk.Label(
+            settings_row,
+            text=f"⚙ {tr('settings_button')}",
+            font=('Microsoft YaHei UI', 8, 'bold'),
+            fg=t['text'],
+            bg=t['bg_section'],
+            cursor='hand2',
+            padx=8,
+            pady=6,
+            anchor='center',
+        )
+        settings_launch_btn.pack(fill='x')
+        settings_launch_btn.bind('<Button-1>', self._open_settings_panel)
+        settings_launch_btn.bind('<Enter>', lambda e: settings_launch_btn.config(bg=t['btn_hover'], fg=t['accent']))
+        settings_launch_btn.bind('<Leave>', lambda e: settings_launch_btn.config(bg=t['bg_section'], fg=t['text']))
 
         launch_wrap = tk.Frame(lf, bg=t['bg'])
         launch_wrap.pack(fill='both', expand=True, padx=2, pady=(2, 0))
@@ -668,15 +842,7 @@ class StatusBar:
             bd=0,
             yscrollincrement=24,
         )
-        launch_scroll = tk.Scrollbar(
-            launch_wrap,
-            orient='vertical',
-            command=launch_canvas.yview,
-            troughcolor=t['bg'],
-            activebackground=t['btn_hover'],
-            bg=t['bg_section'],
-            width=10,
-        )
+        launch_scroll = self._make_scrollbar(launch_wrap, launch_canvas.yview)
         launch_canvas.configure(yscrollcommand=launch_scroll.set)
         launch_canvas.pack(side='left', fill='both', expand=True)
         launch_scroll.pack(side='right', fill='y')
@@ -727,6 +893,20 @@ class StatusBar:
         else:
             self._pin_btn.config(fg=t['text_dim'])
 
+    def _make_scrollbar(self, parent, command):
+        return tk.Scrollbar(
+            parent,
+            orient='vertical',
+            command=command,
+            troughcolor=self.t['scroll_trough'],
+            activebackground=self.t['btn_hover'],
+            bg=self.t['scroll_bg'],
+            width=8,
+            relief='flat',
+            bd=0,
+            highlightthickness=0,
+        )
+
     def _render_shortcuts(self):
         if not hasattr(self, '_launch_list'):
             return
@@ -738,9 +918,9 @@ class StatusBar:
         for app in self.cfg.get('shortcuts', []):
             if not app.get('enabled', True):
                 continue
-            group = app.get('group', '快捷启动')
+            group = app.get('group', group_label('shortcuts'))
             if group != current_group:
-                self._group_label(self._launch_list, group)
+                self._group_label(self._launch_list, display_group(group))
                 current_group = group
             self._app_btn(self._launch_list, app)
             visible = True
@@ -748,7 +928,7 @@ class StatusBar:
         if not visible:
             tk.Label(
                 self._launch_list,
-                text=' 暂无快捷启动项，点击右上角设置添加',
+                text=f" {tr('no_shortcuts')}",
                 font=('Microsoft YaHei UI', 8),
                 fg=self.t['text_dim'],
                 bg=self.t['bg'],
@@ -769,7 +949,7 @@ class StatusBar:
 
         win = tk.Toplevel(self.root)
         self._settings_window = win
-        win.title('快捷启动设置')
+        win.title(tr('settings_title'))
         win.geometry('860x500')
         win.minsize(820, 460)
         win.configure(bg=self.t['bg'])
@@ -781,7 +961,7 @@ class StatusBar:
         right = tk.Frame(win, bg=self.t['bg'])
         right.pack(side='right', fill='both', expand=True)
 
-        tk.Label(left, text='快捷启动项', font=('Microsoft YaHei UI', 10, 'bold'),
+        tk.Label(left, text=tr('settings_items'), font=('Microsoft YaHei UI', 10, 'bold'),
                  fg=self.t['accent'], bg=self.t['bg_section']).pack(anchor='w', padx=12, pady=(12, 6))
 
         list_wrap = tk.Frame(left, bg=self.t['bg_section'])
@@ -796,7 +976,7 @@ class StatusBar:
             highlightthickness=0,
             activestyle='none',
         )
-        list_scroll = tk.Scrollbar(list_wrap, orient='vertical', command=self._settings_listbox.yview)
+        list_scroll = self._make_scrollbar(list_wrap, self._settings_listbox.yview)
         self._settings_listbox.configure(yscrollcommand=list_scroll.set)
         self._settings_listbox.pack(side='left', fill='both', expand=True)
         list_scroll.pack(side='right', fill='y')
@@ -804,10 +984,10 @@ class StatusBar:
 
         btn_row = tk.Frame(left, bg=self.t['bg_section'])
         btn_row.pack(fill='x', padx=10, pady=(0, 12))
-        self._settings_action_btn(btn_row, '新增', self._settings_add_item).pack(side='left', expand=True, fill='x')
-        self._settings_action_btn(btn_row, '删除', self._settings_delete_item).pack(side='left', expand=True, fill='x', padx=6)
+        self._settings_action_btn(btn_row, tr('add'), self._settings_add_item).pack(side='left', expand=True, fill='x')
+        self._settings_action_btn(btn_row, tr('delete'), self._settings_delete_item).pack(side='left', expand=True, fill='x', padx=6)
 
-        tk.Label(right, text='编辑快捷启动', font=('Microsoft YaHei UI', 10, 'bold'),
+        tk.Label(right, text=tr('edit_shortcuts'), font=('Microsoft YaHei UI', 10, 'bold'),
                  fg=self.t['accent'], bg=self.t['bg']).pack(anchor='w', padx=14, pady=(12, 8))
 
         self._settings_vars = {
@@ -815,7 +995,7 @@ class StatusBar:
             'icon': tk.StringVar(),
             'kind': tk.StringVar(value='executable'),
             'target': tk.StringVar(),
-            'group': tk.StringVar(value='快捷启动'),
+            'group': tk.StringVar(value=group_label('shortcuts')),
             'detect': tk.StringVar(),
             'browser': tk.StringVar(value='chrome'),
             'enabled': tk.BooleanVar(value=True),
@@ -823,17 +1003,19 @@ class StatusBar:
 
         form = tk.Frame(right, bg=self.t['bg'])
         form.pack(fill='both', expand=True, padx=14)
+        form.grid_columnconfigure(0, minsize=120)
+        form.grid_columnconfigure(1, weight=1)
 
-        self._settings_entry(form, '名称', self._settings_vars['name'], 0)
-        self._settings_entry(form, '图标', self._settings_vars['icon'], 1)
-        self._settings_option(form, '类型', self._settings_vars['kind'], ['executable', 'url', 'command', 'system'], 2)
-        self._settings_entry(form, '分组', self._settings_vars['group'], 3)
-        self._settings_entry(form, '目标', self._settings_vars['target'], 4, with_browse=True)
-        self._settings_entry(form, '自动识别名', self._settings_vars['detect'], 5)
-        self._settings_option(form, '浏览器', self._settings_vars['browser'], ['chrome', 'default'], 6)
+        self._settings_entry(form, tr('name'), self._settings_vars['name'], 0)
+        self._settings_entry(form, tr('icon'), self._settings_vars['icon'], 1)
+        self._settings_option(form, tr('type'), self._settings_vars['kind'], ['executable', 'url', 'command', 'system'], 2)
+        self._settings_entry(form, tr('group'), self._settings_vars['group'], 3)
+        self._settings_entry(form, tr('target'), self._settings_vars['target'], 4, with_browse=True)
+        self._settings_entry(form, tr('detect_name'), self._settings_vars['detect'], 5)
+        self._settings_option(form, tr('browser'), self._settings_vars['browser'], ['chrome', 'default'], 6)
         tk.Checkbutton(
             form,
-            text='启用此项',
+            text=tr('enabled_item'),
             variable=self._settings_vars['enabled'],
             bg=self.t['bg'],
             fg=self.t['text'],
@@ -842,13 +1024,7 @@ class StatusBar:
             activeforeground=self.t['text'],
         ).grid(row=7, column=1, sticky='w', pady=(8, 0))
 
-        hint = (
-            '目标填写示例:\n'
-            '- executable: 程序 .exe 路径，或写 auto 交给自动识别\n'
-            '- url: 网站地址，例如 https://chat.openai.com\n'
-            '- command: 命令行，例如 cursor 或 opencode\n'
-            '- system: 本地文件夹或文件路径'
-        )
+        hint = tr('hint')
         tk.Label(form, text=hint, justify='left', font=('Microsoft YaHei UI', 8),
                  fg=self.t['text_dim'], bg=self.t['bg']).grid(row=8, column=0, columnspan=3, sticky='w', pady=(12, 0))
 
@@ -857,13 +1033,13 @@ class StatusBar:
         action_row.grid_columnconfigure(0, weight=1)
         action_row.grid_columnconfigure(1, weight=1)
         action_row.grid_columnconfigure(2, weight=1)
-        self._settings_action_btn(action_row, '保存当前项', self._settings_apply_form).grid(
+        self._settings_action_btn(action_row, tr('save_current'), self._settings_apply_form).grid(
             row=0, column=0, sticky='ew'
         )
-        self._settings_action_btn(action_row, '保存并关闭', self._settings_save_all).grid(
+        self._settings_action_btn(action_row, tr('save_close'), self._settings_save_all).grid(
             row=0, column=1, sticky='ew', padx=8
         )
-        self._settings_action_btn(action_row, '取消', self._close_settings_panel).grid(
+        self._settings_action_btn(action_row, tr('cancel'), self._close_settings_panel).grid(
             row=0, column=2, sticky='ew'
         )
 
@@ -898,23 +1074,26 @@ class StatusBar:
 
     def _settings_entry(self, parent, label, var, row, with_browse=False):
         tk.Label(parent, text=label, font=('Microsoft YaHei UI', 8, 'bold'),
-                 fg=self.t['text'], bg=self.t['bg']).grid(row=row, column=0, sticky='w', pady=5, padx=(0, 8))
+                 fg=self.t['text'], bg=self.t['bg'], width=14, anchor='w').grid(
+                     row=row, column=0, sticky='w', pady=5, padx=(0, 8)
+                 )
         entry = tk.Entry(parent, textvariable=var, bg=self.t['bg_section'], fg=self.t['text'],
                          insertbackground=self.t['text'], relief='flat')
         entry.grid(row=row, column=1, sticky='ew', pady=5)
         if with_browse:
-            tk.Button(parent, text='浏览', command=self._settings_browse_target,
+            tk.Button(parent, text=tr('browse'), command=self._settings_browse_target,
                       bg=self.t['bg_section'], fg=self.t['text'],
                       activebackground=self.t['btn_hover'], activeforeground=self.t['accent'],
                       relief='flat', bd=0, padx=8, pady=4, cursor='hand2').grid(row=row, column=2, padx=(8, 0), pady=5)
-        parent.grid_columnconfigure(1, weight=1)
-
     def _settings_option(self, parent, label, var, values, row):
         tk.Label(parent, text=label, font=('Microsoft YaHei UI', 8, 'bold'),
-                 fg=self.t['text'], bg=self.t['bg']).grid(row=row, column=0, sticky='w', pady=5, padx=(0, 8))
+                 fg=self.t['text'], bg=self.t['bg'], width=14, anchor='w').grid(
+                     row=row, column=0, sticky='w', pady=5, padx=(0, 8)
+                 )
         menu = tk.OptionMenu(parent, var, *values)
         menu.config(bg=self.t['bg_section'], fg=self.t['text'], activebackground=self.t['btn_hover'],
-                    activeforeground=self.t['accent'], relief='flat', highlightthickness=0)
+                    activeforeground=self.t['accent'], relief='flat', highlightthickness=0,
+                    width=18, anchor='w')
         menu['menu'].config(bg=self.t['bg_section'], fg=self.t['text'],
                             activebackground=self.t['btn_hover'], activeforeground=self.t['accent'])
         menu.grid(row=row, column=1, sticky='w', pady=5)
@@ -924,9 +1103,9 @@ class StatusBar:
             return
         self._settings_listbox.delete(0, 'end')
         for item in self._settings_items:
-            status = '' if item.get('enabled', True) else ' [停用]'
-            group = item.get('group', '快捷启动')
-            self._settings_listbox.insert('end', f"{group} / {item.get('name', '未命名')}{status}")
+            status = '' if item.get('enabled', True) else tr('disabled_suffix')
+            group = display_group(item.get('group', group_label('shortcuts')))
+            self._settings_listbox.insert('end', f"{group} / {item.get('name', tr('unnamed'))}{status}")
 
     def _settings_collect_form(self):
         shortcut = {
@@ -935,7 +1114,7 @@ class StatusBar:
             'icon': self._settings_vars['icon'].get().strip() or '▸',
             'kind': self._settings_vars['kind'].get().strip() or 'executable',
             'target': self._settings_vars['target'].get().strip(),
-            'group': self._settings_vars['group'].get().strip() or '快捷启动',
+            'group': self._settings_vars['group'].get().strip() or group_label('shortcuts'),
             'enabled': bool(self._settings_vars['enabled'].get()),
         }
         detect = self._settings_vars['detect'].get().strip()
@@ -953,7 +1132,7 @@ class StatusBar:
         self._settings_vars['icon'].set(item.get('icon', ''))
         self._settings_vars['kind'].set(item.get('kind', 'executable'))
         self._settings_vars['target'].set(item.get('target', ''))
-        self._settings_vars['group'].set(item.get('group', '快捷启动'))
+        self._settings_vars['group'].set(item.get('group', group_label('shortcuts')))
         self._settings_vars['detect'].set(item.get('detect', ''))
         self._settings_vars['browser'].set(item.get('browser', 'chrome'))
         self._settings_vars['enabled'].set(bool(item.get('enabled', True)))
@@ -971,11 +1150,11 @@ class StatusBar:
 
     def _settings_add_item(self):
         item = normalize_shortcut({
-            'name': '新项目',
+            'name': tr('new_item'),
             'icon': '✨',
             'kind': 'url',
             'target': 'https://',
-            'group': '快捷启动',
+            'group': group_label('shortcuts'),
             'enabled': True,
         })
         self._settings_items.append(item)
@@ -1001,21 +1180,21 @@ class StatusBar:
             self._settings_vars['icon'].set('')
             self._settings_vars['kind'].set('executable')
             self._settings_vars['target'].set('')
-            self._settings_vars['group'].set('快捷启动')
+            self._settings_vars['group'].set(group_label('shortcuts'))
             self._settings_vars['detect'].set('')
             self._settings_vars['browser'].set('chrome')
             self._settings_vars['enabled'].set(True)
 
     def _settings_apply_form(self):
         if self._settings_selected_index is None:
-            messagebox.showwarning('未选择项目', '请先选择一个快捷启动项。')
+            messagebox.showwarning(tr('no_item_selected_title'), tr('no_item_selected_msg'))
             return False
         shortcut = self._settings_collect_form()
         if not shortcut.get('name'):
-            messagebox.showwarning('名称不能为空', '请填写快捷启动名称。')
+            messagebox.showwarning(tr('name_required_title'), tr('name_required_msg'))
             return False
         if not shortcut.get('target'):
-            messagebox.showwarning('目标不能为空', '请填写网址、程序路径或命令。')
+            messagebox.showwarning(tr('target_required_title'), tr('target_required_msg'))
             return False
         self._settings_items[self._settings_selected_index] = normalize_shortcut(shortcut)
         self._refresh_settings_list()
@@ -1031,7 +1210,7 @@ class StatusBar:
         save_config(self.cfg)
         self._render_shortcuts()
         self._close_settings_panel()
-        messagebox.showinfo('已保存', '快捷启动配置已保存并立即生效。')
+        messagebox.showinfo(tr('saved_title'), tr('saved_msg'))
 
     def _settings_browse_target(self):
         kind = self._settings_vars['kind'].get()
@@ -1040,7 +1219,7 @@ class StatusBar:
         if kind == 'system':
             path = filedialog.askdirectory()
         else:
-            path = filedialog.askopenfilename(filetypes=[('可执行文件', '*.exe'), ('所有文件', '*.*')])
+            path = filedialog.askopenfilename(filetypes=[(tr('exe_files'), '*.exe'), (tr('all_files'), '*.*')])
         if path:
             self._settings_vars['target'].set(path)
 
@@ -1223,7 +1402,7 @@ class StatusBar:
             self._draw_bar(self.disk_bar, s['disk_pct'], self.t['disk_color'], disk_txt)
 
             if s['cpu_freq']:
-                self.freq_label.config(text=f"  {s['cpu_freq']:.0f} MHz · {psutil.cpu_count()}核")
+                self.freq_label.config(text=f"  {s['cpu_freq']:.0f} MHz · {psutil.cpu_count()} {tr('cores')}")
 
             self.net_up_lbl.config(text=f"↑ {fmt_speed(s['net_up'])}")
             self.net_dn_lbl.config(text=f"↓ {fmt_speed(s['net_down'])}")

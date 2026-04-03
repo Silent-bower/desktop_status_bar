@@ -23,9 +23,9 @@ set "STARTUP_DIR=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
 set "VBS_FILE=%STARTUP_DIR%\DesktopStatusBar.vbs"
 set "SCRIPT_DIR=%~dp0"
 
-:: Use PowerShell to create the VBS file (handles path escaping properly)
+:: Use PowerShell to create the VBS file with an explicit pythonw path
 powershell -NoProfile -Command ^
-  "$vbs = 'Set oShell = CreateObject(\"WScript.Shell\")' + [Environment]::NewLine + 'oShell.Run \"pythonw \"\"' + '%SCRIPT_DIR%status_bar.pyw' + '\"\"\"  , 0, False'; [System.IO.File]::WriteAllText('%VBS_FILE%', $vbs, [System.Text.Encoding]::Default)"
+  "$python = (Get-Command python.exe -ErrorAction Stop).Source; $pythonw = Join-Path (Split-Path $python) 'pythonw.exe'; if (-not (Test-Path $pythonw)) { $pythonw = 'pythonw.exe' }; $script = Join-Path '%SCRIPT_DIR%' 'status_bar.pyw'; $vbs = @('Set oShell = CreateObject(""WScript.Shell"")', 'oShell.Run """"' + $pythonw + '"" ""' + $script + '"""", 0, False') -join [Environment]::NewLine; Set-Content -Path '%VBS_FILE%' -Value $vbs -Encoding Default"
 
 if exist "%VBS_FILE%" (
     echo      ✓ 已添加到启动项
