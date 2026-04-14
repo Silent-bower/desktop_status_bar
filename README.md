@@ -39,6 +39,19 @@ pythonw status_bar.pyw
 - Click `⚙` to open the shortcut settings panel
 - Click `✕` to close the app
 
+## Recent Progress
+
+- Improved the shortcut settings panel to preserve in-progress form edits when switching selection
+- Reworked the left settings list into custom rows so selection updates feel lighter and less flickery
+- Added themed scrollbar rendering and smoother wheel scrolling for the left shortcut list
+- Added a `Status Bar Settings` section with desktop-only trigger mode, style presets, and opacity control
+- Updated the shortcut list behavior so `Add` and `Delete` stay below the visible shortcut items and pin above `Status Bar Settings` only when the list overflows
+- Added automatic scrolling to newly created shortcut items so they are selected and brought into view more reliably
+
+## Known Issue
+
+- When the shortcut list is already full, a newly added item may still fail to appear immediately in the visible area until the list is saved or reopened; the item is usually created successfully, but the live visibility behavior still needs refinement
+
 ## Manage Shortcuts
 
 Use the settings panel to add, edit, remove, enable, or disable shortcuts.
